@@ -1,0 +1,148 @@
+{% comment %}
+  Shopify Custom Form → Netlify Function → HubSpot
+
+  Usage:
+    1. Copy this file into your Shopify theme (e.g., sections/booking-form.liquid)
+    2. Update NETLIFY_BASE_URL below to your deployed Netlify site.
+    3. Choose an integration mode:
+       - "crm"     → uses submit-booking (creates/updates contact directly)
+       - "forms"   → uses submit-hubspot-form (submits to a HubSpot form, triggers workflows)
+
+  If using "forms" mode, also set:
+    - HUBSPOT_PORTAL_ID
+    - HUBSPOT_FORM_GUID
+{% endcomment %}
+
+{% assign NETLIFY_BASE_URL = 'https://YOUR-SITE.netlify.app' %}
+{% assign INTEGRATION_MODE = 'crm' %}
+
+{% comment %} Only needed when INTEGRATION_MODE == 'forms' {% endcomment %}
+{% assign HUBSPOT_PORTAL_ID = '1234567' %}
+{% assign HUBSPOT_FORM_GUID = 'your-form-guid-here' %}
+
+<div id="hubspot-form-wrapper" class="page-width">
+  <h2>Book an Appointment</h2>
+
+  <form id="booking-form" class="form">
+    <div class="form__field">
+      <label for="booking-email">Email <span aria-hidden="true">*</span></label>
+      <input type="email" id="booking-email" name="email" required placeholder="you@example.com" />
+    </div>
+
+    <div class="form__field">
+      <label for="booking-firstname">First name</label>
+      <input type="text" id="booking-firstname" name="firstname" placeholder="Jane" />
+    </div>
+
+    <div class="form__field">
+      <label for="booking-lastname">Last name</label>
+      <input type="text" id="booking-lastname" name="lastname" placeholder="Doe" />
+    </div>
+
+    <div class="form__field">
+      <label for="booking-phone">Phone</label>
+      <input type="tel" id="booking-phone" name="phone" placeholder="+1 555 0100" />
+    </div>
+
+    <div class="form__field">
+      <label for="booking-message">Message</label>
+      <textarea id="booking-message" name="message" rows="4" placeholder="How can we help?"></textarea>
+    </div>
+
+    <button type="submit" class="button button--primary" id="booking-submit">
+      Submit Booking
+    </button>
+
+    <p id="booking-feedback" role="status" aria-live="polite" style="margin-top: 1rem;"></p>
+  </form>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('booking-form');
+  const feedback = document.getElementById('booking-feedback');
+  const submitBtn = document.getElementById('booking-submit');
+
+  const NETLIFY_BASE_URL = {{ NETLIFY_BASE_URL | json }};
+  const MODE = {{ INTEGRATION_MODE | json }};
+  const PORTAL_ID = {{ HUBSPOT_PORTAL_ID | json }};
+  const FORM_GUID = {{ HUBSPOT_FORM_GUID | json }};
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : '';
+  }
+
+  function setLoading(isLoading) {
+    submitBtn.disabled = isLoading;
+    submitBtn.textContent = isLoading ? 'Submitting…' : 'Submit Booking';
+  }
+
+  function showMessage(text, isError) {
+    feedback.textContent = text;
+    feedback.style.color = isError ? 'red' : 'green';
+  }
+
+  async function submitCrm(data) {
+    const response = await fetch(`${NETLIFY_BASE_URL}/.netlify/functions/submit-booking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ properties: data }),
+    });
+    return response.json();
+  }
+
+  async function submitForms(data) {
+    const fields = Object.entries(data).map(([name, value]) => ({ name, value }));
+    const payload = {
+      portalId: PORTAL_ID,
+      formGuid: FORM_GUID,
+      fields,
+      context: {
+        pageUri: window.location.href,
+        pageName: document.title,
+        hutk: getCookie('hubspotutk'),
+      },
+    };
+
+    const response = await fetch(`${NETLIFY_BASE_URL}/.netlify/functions/submit-hubspot-form`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    feedback.textContent = '';
+    setLoading(true);
+
+    const data = {
+      email: form.email.value.trim(),
+      firstname: form.firstname.value.trim(),
+      lastname: form.lastname.value.trim(),
+      phone: form.phone.value.trim(),
+      message: form.message.value.trim(),
+    };
+
+    try {
+      const result = MODE === 'forms'
+        ? await submitForms(data)
+        : await submitCrm(data);
+
+      if (result.success) {
+        showMessage(result.message || 'Thank you! We will be in touch soon.', false);
+        form.reset();
+      } else {
+        showMessage(result.error || 'Something went wrong. Please try again.', true);
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Network error. Please try again.', true);
+    } finally {
+      setLoading(false);
+    }
+  });
+})();
+</script>

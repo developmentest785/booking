@@ -1,0 +1,3 @@
+# Netlify Functions-only project (no static site to publish)
+# Functions are auto-detected from netlify/functions/
+# DO NOT put secrets here — use the Netlify UI or CLI instead.
