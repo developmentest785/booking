@@ -1,0 +1,801 @@
+{% layout none %}
+{% assign build_collection = collections['build-your-package'] %}
+{% assign addon_collection = collections['choose-your-add-on'] %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Build Your Package</title>
+  <style>
+    /* ------ Modal Base Styling ------ */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.7);
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      position: relative;
+      background: linear-gradient(to bottom, #fff, #f9f7f5);
+      margin: 5% auto;
+      padding: 30px 40px;
+      width: 100%;
+      max-width: 650px;
+      border-radius: 12px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+      animation: slideDown 0.4s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .close {
+      position: absolute;
+      top: 18px;
+      right: 25px;
+      color: #888;
+      font-size: 28px;
+      font-weight: 300;
+      transition: color 0.2s, transform 0.2s;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #333;
+      transform: rotate(90deg);
+      text-decoration: none;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Playfair Display', serif;
+    }
+
+    .modal-content h2 {
+      color: #33261D;
+      margin-bottom: 25px;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+      border-bottom: 1px solid #E6DED8;
+      padding-bottom: 15px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      color: #5A483F;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #E6DED8;
+      border-radius: 6px;
+      background-color: #FBF9F8;
+      color: #33261D;
+      font-size: 15px;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .form-control:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #C09F80;
+      box-shadow: 0 0 0 3px rgba(192, 159, 128, 0.2);
+      background-color: #fff;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235A483F' d='M6 8L0 2h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+      padding-right: 40px;
+    }
+
+    .btn {
+      display: inline-block;
+      font-weight: 500;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: middle;
+      user-select: none;
+      border: 1px solid transparent;
+      padding: 12px 30px;
+      font-size: 15px;
+      line-height: 1.5;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .btn-dark {
+      color: #fff;
+      background: #5ab198;
+      border-radius: 50px;
+      font-size: 12px;
+      width: 200px;
+      height: 52px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: bold;
+      border: none;
+      margin-top: 30px;
+      margin-bottom: 30px;
+    }
+
+    .btn-dark:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(90, 72, 63, 0.3);
+      background-color: #4a9983;
+    }
+
+    .form-button {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    #booking-feedback {
+      text-align: center;
+      font-size: 14px;
+      margin-top: 15px;
+      min-height: 20px;
+    }
+
+    .booking-summary-preview {
+      background: #f9f7f5;
+      border: 1px solid #E6DED8;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #5A483F;
+    }
+
+    .booking-summary-preview strong {
+      color: #33261D;
+    }
+
+    /* Package Builder Styles */
+    .step { margin-bottom: 2rem; }
+    .text-section {
+      margin-left: 100px;
+      margin-right: 100px;
+      border-bottom: 1px solid #999999;
+      padding-bottom: 30px;
+      margin-bottom: 30px;
+    }
+    .product-grid {
+      list-style: none;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-left: 75px;
+      margin-right: 75px;
+    }
+    .grid__item {
+      cursor: pointer;
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+    }
+    .card-wrapper {
+      padding: 0.5rem;
+      position: relative;
+      transition: border 0.3s ease;
+    }
+    .card-wrapper.selected { border: 2px solid #5ab198; }
+    .selected-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #5ab198;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: bold;
+      z-index: 5;
+      opacity: 0.5;
+    }
+    .card-wrapper.selected .selected-overlay { display: flex; }
+    .card { background: #fff; }
+    .card__inner { position: relative; }
+    .card__media { text-align: center; }
+    .card__media img {
+      max-width: 100%;
+      height: 430px !important;
+      border-top-left-radius: 200px;
+      border-top-right-radius: 200px;
+      object-fit: cover;
+    }
+    .card__content { padding: 0.5rem 0; }
+    .selection-input { display: none; }
+    .error-message { color: red; margin-bottom: 1rem; }
+    .summary {
+      border-top: 1px solid #ddd;
+      padding-top: 1rem;
+      margin-top: 1rem;
+      padding-left: 100px;
+      padding-bottom: 30px;
+    }
+    .action-buttons {
+      margin-top: 1rem;
+      padding-left: 100px;
+      margin-bottom: 1rem;
+    }
+    #request-booking {
+      background-color: #d2ac66;
+      color: white;
+      border-radius: 50px;
+      font-size: 12px;
+      width: 200px;
+      height: 52px;
+      text-align: center;
+      padding-top: 15px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-bottom: 15px;
+      border: none;
+      cursor: pointer;
+    }
+    #request-booking:hover {
+      background-color: #c09b55;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(90, 72, 63, 0.3);
+    }
+    h1 {
+      font-family: "Times New Roman", Times, serif;
+      font-weight: bold;
+      font-size: 30px;
+      color: #999999 !important;
+      text-align: left;
+    }
+    .blue-text { color: #5ab298; }
+
+    @media (max-width: 750px) {
+      .product-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 820px) {
+      .product-grid { grid-template-columns: repeat(1, 1fr); }
+      h1 { font-size: 30px; }
+      h2 { font-family: Montserrat; font-weight: bold; text-transform: uppercase; }
+    }
+    @media (max-width: 480px) {
+      .product-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 40rem) {
+      .text-section { margin: 50px 50px 0; }
+      .product-grid { margin: 20px; }
+      #step3 { padding: 50px; }
+      .summary { padding: 0 50px; }
+      .action-buttons { padding: 50px 50px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="custom-builder">
+    <!-- Step 1: Build Your Package -->
+    <div class="step" id="step1">
+      <div class="text-section">
+        <h1>Customize Your Own Spa Package Based on the Treatments You Like...</h1>
+        <p>Standard Voucher Terms &amp; Condition's Apply with the addition of one term: <br>* All Package Treatments must be redeemed within 1 visit.</p>
+        <h2><span class="blue-text">Step 1: Choose your Massage:</span> R350 Per Selection (Minimum 1)</h2>
+      </div>
+      <ul class="product-grid">
+        {% for product in build_collection.products %}
+        <li class="grid__item" data-type="build" data-product-id="{{ product.id }}" data-variant-id="{{ product.variants.first.id }}" data-title="{{ product.title }}" data-price="350" data-duration="{{ product.vendor | replace:'mins','' }}">
+          <div class="card-wrapper">
+            <div class="selected-overlay">Selected</div>
+            <div class="card" style="--ratio-percent:125%;">
+              <div class="card__inner">
+                <div class="card__media">
+                  {% if product.featured_image %}
+                  <img src="{{ product.featured_image | img_url: '533x' }}" alt="{{ product.title }}">
+                  {% else %}
+                  <img src="//placehold.it/533x533" alt="{{ product.title }}">
+                  {% endif %}
+                </div>
+                <div class="card__content">
+                  <div class="card__information">
+                    <h3 class="card__heading">{{ product.title }}</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="selection-input">
+                <input type="radio" name="build_product" id="build_{{ product.id }}" data-variant-id="{{ product.variants.first.id }}" data-title="{{ product.title }}" data-duration="{{ product.vendor | replace:'mins','' }}" value="{{ product.id }}" data-price="350">
+              </div>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Step 2: Choose Your Add‑Ons -->
+    <div class="step" id="step2">
+      <div class="text-section">
+        <h2><span class="blue-text">Step 2:</span> Choose your add‑ons (Minimum 2)</h2>
+      </div>
+      <ul class="product-grid">
+        {% for product in addon_collection.products %}
+        <li class="grid__item" data-type="addon" data-product-id="{{ product.id }}" data-variant-id="{{ product.variants.first.id }}" data-title="{{ product.title }}" data-price="150" data-duration="{{ product.vendor | replace:'mins','' }}">
+          <div class="card-wrapper">
+            <div class="selected-overlay">Selected</div>
+            <div class="card" style="--ratio-percent:125%;">
+              <div class="card__inner">
+                <div class="card__media">
+                  {% if product.featured_image %}
+                  <img src="{{ product.featured_image | img_url: '533x' }}" alt="{{ product.title }}">
+                  {% else %}
+                  <img src="//placehold.it/533x533" alt="{{ product.title }}">
+                  {% endif %}
+                </div>
+                <div class="card__content">
+                  <div class="card__information">
+                    <h3 class="card__heading">{{ product.title }}</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="selection-input">
+                <input type="checkbox" name="addon_product" id="addon_{{ product.id }}" data-variant-id="{{ product.variants.first.id }}" data-title="{{ product.title }}" data-duration="{{ product.vendor | replace:'mins','' }}" value="{{ product.id }}" data-price="150">
+              </div>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+
+    <!-- Step 3: Quantity -->
+    <div class="step" id="step3">
+      <h2 class="blue-text">Step 3: No of People Joining</h2>
+      <label for="quantity">No of people:</label>
+      <input type="number" id="quantity" name="quantity" min="1" value="1">
+    </div>
+
+    <!-- Summary -->
+    <div class="summary" id="summary">
+      <h2>Summary</h2>
+      <div id="summary-content"><p>No products selected yet.</p></div>
+      <div id="total-wrapper" style="display:none;"><div class="title-price-min">Total Cost:</div> <div id="total"></div></div>
+      <div id="duration-wrapper" style="display:none;"><div class="title-price-min">Total Duration:</div> <div id="duration"></div></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button id="request-booking" onclick="validateAndShowBookingModal()">REQUEST A BOOKING</button>
+    </div>
+  </div>
+
+  <!-- Booking Modal -->
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Request a Booking</h2>
+      <form id="hubspot-booking-form">
+        <div class="form-group">
+          <label for="hs-firstname">First Name</label>
+          <input type="text" id="hs-firstname" name="firstname" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="hs-lastname">Last Name</label>
+          <input type="text" id="hs-lastname" name="lastname" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="hs-email">Email <span aria-hidden="true">*</span></label>
+          <input type="email" id="hs-email" name="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="hs-phone">Phone</label>
+          <input type="tel" id="hs-phone" name="phone" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="hs-date">Preferred Date</label>
+          <input type="date" id="hs-date" name="preferred_date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="hs-branch">Branch</label>
+          <select id="hs-branch" name="branch" class="form-control">
+            <option value="">Select Branch</option>
+            <option value="Durban">Durban</option>
+            <option value="Umhlanga">Umhlanga</option>
+            <option value="Ballito">Ballito</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="hs-message">Message / Special Requests</label>
+          <textarea id="hs-message" name="message" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="booking-summary-preview" id="modal-summary-preview"></div>
+
+        <!-- Hidden mapped fields -->
+        <input type="hidden" name="massage_type" id="hs-massage-type">
+        <input type="hidden" name="addons_selected" id="hs-addons">
+        <input type="hidden" name="number_of_people" id="hs-quantity">
+        <input type="hidden" name="total_price" id="hs-total-price">
+        <input type="hidden" name="total_duration" id="hs-total-duration">
+        <input type="hidden" name="package_summary" id="hs-summary">
+
+        <div class="form-button">
+          <button type="submit" class="btn-dark" id="booking-submit">Submit Booking</button>
+        </div>
+        <p id="booking-feedback" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    // ===== HubSpot Configuration =====
+    const HUBSPOT_CONFIG = {
+      portalId: "246038968",
+      formGuid: "fef0d83e-9157-4ac9-80a8-10f12468f238"
+    };
+
+    // ===== Package Builder Logic =====
+    function validateSelections() {
+      const errorMessage = document.getElementById('error-message');
+      if (errorMessage) errorMessage.innerHTML = '';
+
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      const addonInputs = document.querySelectorAll('input[name="addon_product"]:checked');
+
+      if (!buildInput) {
+        if (errorMessage) {
+          errorMessage.innerHTML = 'Please select a massage package from Step 1.';
+          errorMessage.scrollIntoView({behavior: 'smooth'});
+        }
+        return false;
+      }
+
+      if (addonInputs.length < 2) {
+        if (errorMessage) {
+          errorMessage.innerHTML = 'Please select at least 2 add‑on products from Step 2.';
+          errorMessage.scrollIntoView({behavior: 'smooth'});
+        }
+        return false;
+      }
+
+      return true;
+    }
+
+    function calculateTotalPrice() {
+      const quantityInput = document.getElementById('quantity');
+      if (!quantityInput) return 0;
+      const quantity = parseInt(quantityInput.value) || 1;
+      let totalPrice = 0;
+
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      if (buildInput) {
+        totalPrice += parseInt(buildInput.getAttribute('data-price')) * quantity;
+      }
+
+      document.querySelectorAll('input[name="addon_product"]:checked').forEach(function(input) {
+        totalPrice += parseInt(input.getAttribute('data-price')) * quantity;
+      });
+
+      return totalPrice;
+    }
+
+    function calculateTotalDuration() {
+      let totalDuration = 0;
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      if (buildInput) {
+        totalDuration += parseInt(buildInput.getAttribute('data-duration')) || 0;
+      }
+      document.querySelectorAll('input[name="addon_product"]:checked').forEach(function(input) {
+        totalDuration += parseInt(input.getAttribute('data-duration')) || 0;
+      });
+      return totalDuration;
+    }
+
+    function generateLineItems() {
+      const quantity = parseInt(document.getElementById('quantity').value) || 1;
+      let items = [];
+
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      if (buildInput) {
+        items.push(`\u2022 ${buildInput.getAttribute('data-title')} (R${buildInput.getAttribute('data-price')} x ${quantity})`);
+      }
+
+      document.querySelectorAll('input[name="addon_product"]:checked').forEach(function(input) {
+        items.push(`\u2022 ${input.getAttribute('data-title')} (R${input.getAttribute('data-price')} x ${quantity})`);
+      });
+
+      return items.join('\n');
+    }
+
+    function updateSummary() {
+      const errorMessage = document.getElementById('error-message');
+      if (errorMessage) errorMessage.innerHTML = '';
+
+      const quantityInput = document.getElementById('quantity');
+      if (!quantityInput) return;
+
+      const quantity = parseInt(quantityInput.value) || 1;
+      let summaryHTML = '';
+      let totalPrice = 0;
+      let totalTime = 0;
+
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      if (buildInput) {
+        const buildTitle = buildInput.getAttribute('data-title');
+        const buildPrice = parseInt(buildInput.getAttribute('data-price'));
+        const buildTime = parseInt(buildInput.getAttribute('data-duration')) || 0;
+        summaryHTML += '<p><strong>Build Your Package:</strong> ' + buildTitle + ' x ' + quantity + ' (R' + (buildPrice * quantity) + ')</p>';
+        totalPrice += buildPrice * quantity;
+        totalTime += buildTime;
+      } else {
+        summaryHTML += '<p><strong>Build Your Package:</strong> None selected</p>';
+      }
+
+      const addonInputs = document.querySelectorAll('input[name="addon_product"]:checked');
+      if (addonInputs.length > 0) {
+        summaryHTML += '<p><strong>Add‑Ons:</strong></p><ul>';
+        addonInputs.forEach(function(input) {
+          const addonTitle = input.getAttribute('data-title');
+          const addonPrice = parseInt(input.getAttribute('data-price'));
+          const addonTime = parseInt(input.getAttribute('data-duration')) || 0;
+          summaryHTML += '<li>' + addonTitle + ' x ' + quantity + ' (R' + (addonPrice * quantity) + ')</li>';
+          totalPrice += addonPrice * quantity;
+          totalTime += addonTime;
+        });
+        summaryHTML += '</ul>';
+      } else {
+        summaryHTML += '<p><strong>Add‑Ons:</strong> None selected</p>';
+      }
+
+      summaryHTML += '<p><strong>Total Price:</strong> R' + totalPrice + '</p>';
+      summaryHTML += '<p><strong>Total Duration:</strong> ' + totalTime + ' mins</p>';
+
+      const summaryContent = document.getElementById('summary-content');
+      if (summaryContent) summaryContent.innerHTML = summaryHTML;
+
+      const totalElement = document.getElementById('total');
+      if (totalElement) totalElement.innerHTML = 'R ' + totalPrice;
+
+      const durationElement = document.getElementById('duration');
+      if (durationElement) durationElement.innerHTML = totalTime + ' Mins';
+
+      const totalWrapper = document.getElementById('total-wrapper');
+      const durationWrapper = document.getElementById('duration-wrapper');
+      if (totalWrapper) totalWrapper.style.display = 'block';
+      if (durationWrapper) durationWrapper.style.display = 'block';
+    }
+
+    function toggleSelection(e) {
+      if (!e || !e.target || !e.currentTarget) return;
+      if (e.target.tagName.toLowerCase() === 'a' || e.target.tagName.toLowerCase() === 'button') return;
+
+      const li = e.currentTarget;
+      const type = li.getAttribute('data-type');
+      if (!type) return;
+
+      const inputSelector = type === 'build' ? 'input[name="build_product"]' : 'input[name="addon_product"]';
+      const input = li.querySelector(inputSelector);
+      if (!input) return;
+
+      if (type === 'build') {
+        document.querySelectorAll('input[name="build_product"]').forEach(function(r) {
+          r.checked = false;
+          const wrapper = r.closest('.card-wrapper');
+          if (wrapper) wrapper.classList.remove('selected');
+        });
+        input.checked = true;
+        const cardWrapper = li.querySelector('.card-wrapper');
+        if (cardWrapper) cardWrapper.classList.add('selected');
+      } else {
+        input.checked = !input.checked;
+        const cardWrapper = li.querySelector('.card-wrapper');
+        if (cardWrapper) cardWrapper.classList.toggle('selected', input.checked);
+      }
+      updateSummary();
+    }
+
+    // ===== Booking Modal Logic =====
+    function populateBookingModal() {
+      const buildInput = document.querySelector('input[name="build_product"]:checked');
+      const addonInputs = document.querySelectorAll('input[name="addon_product"]:checked');
+      const quantity = parseInt(document.getElementById('quantity').value) || 1;
+
+      if (!buildInput) return;
+
+      const massage = buildInput.dataset.title;
+      const addons = Array.from(addonInputs).map(a => a.dataset.title).join(', ');
+      const summary = generateLineItems();
+      const totalPrice = calculateTotalPrice();
+      const totalDuration = calculateTotalDuration();
+
+      document.getElementById('hs-massage-type').value = massage;
+      document.getElementById('hs-addons').value = addons;
+      document.getElementById('hs-quantity').value = quantity;
+      document.getElementById('hs-total-price').value = totalPrice;
+      document.getElementById('hs-total-duration').value = totalDuration;
+      document.getElementById('hs-summary').value = summary;
+
+      const previewHTML = `
+        <p><strong>Massage:</strong> ${massage}</p>
+        <p><strong>Add-ons:</strong> ${addons || 'None'}</p>
+        <p><strong>People:</strong> ${quantity}</p>
+        <p><strong>Total:</strong> R${totalPrice} &nbsp;|&nbsp; <strong>Duration:</strong> ${totalDuration} mins</p>
+      `;
+      document.getElementById('modal-summary-preview').innerHTML = previewHTML;
+    }
+
+    function validateAndShowBookingModal() {
+      if (!validateSelections()) return;
+
+      const modal = document.getElementById('myModal');
+      if (modal) {
+        populateBookingModal();
+        modal.style.display = 'block';
+      }
+    }
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : '';
+    }
+
+    function setLoading(isLoading) {
+      const btn = document.getElementById('booking-submit');
+      if (!btn) return;
+      btn.disabled = isLoading;
+      btn.textContent = isLoading ? 'Submitting\u2026' : 'Submit Booking';
+    }
+
+    function showFeedback(text, isError) {
+      const el = document.getElementById('booking-feedback');
+      if (!el) return;
+      el.textContent = text;
+      el.style.color = isError ? '#c0392b' : '#27ae60';
+    }
+
+    // ===== HubSpot Forms API Submission =====
+    document.getElementById('hubspot-booking-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      showFeedback('');
+      setLoading(true);
+
+      const form = e.target;
+      const getValue = (name) => {
+        const el = form.querySelector('[name="' + name + '"]');
+        return el ? el.value : '';
+      };
+
+      const payload = {
+        fields: [
+          { name: 'email', value: getValue('email') },
+          { name: 'firstname', value: getValue('firstname') },
+          { name: 'lastname', value: getValue('lastname') },
+          { name: 'phone', value: getValue('phone') },
+          { name: 'preferred_date', value: getValue('preferred_date') },
+          { name: 'branch', value: getValue('branch') },
+          { name: 'message', value: getValue('message') },
+          { name: 'massage_type', value: getValue('massage_type') },
+          { name: 'addons_selected', value: getValue('addons_selected') },
+          { name: 'number_of_people', value: getValue('number_of_people') },
+          { name: 'total_price', value: getValue('total_price') },
+          { name: 'total_duration', value: getValue('total_duration') },
+          { name: 'package_summary', value: getValue('package_summary') }
+        ],
+        context: {
+          pageUri: window.location.href,
+          pageName: document.title,
+          hutk: getCookie('hubspotutk')
+        }
+      };
+
+      try {
+        const response = await fetch(
+          'https://api.hsforms.com/submissions/v3/integration/submit/' + HUBSPOT_CONFIG.portalId + '/' + HUBSPOT_CONFIG.formGuid,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showFeedback(data.inlineMessage || 'Thank you! A spa consultant will contact you soon.', false);
+          form.reset();
+          setTimeout(function() {
+            const modal = document.getElementById('myModal');
+            if (modal) modal.style.display = 'none';
+          }, 2000);
+        } else {
+          console.error('HubSpot submission error:', data);
+          const msg = data.message || data.errors?.[0]?.message || 'Submission failed. Please try again.';
+          showFeedback(msg, true);
+        }
+      } catch (err) {
+        console.error('Network error:', err);
+        showFeedback('Network error. Please check your connection and try again.', true);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // ===== Event Listeners =====
+    $(document).ready(function() {
+      updateSummary();
+
+      // Product grid clicks
+      const customBuilder = document.querySelector('.custom-builder');
+      if (customBuilder) {
+        customBuilder.addEventListener('click', function(e) {
+          const gridItem = e.target.closest('.grid__item');
+          if (gridItem && this.contains(gridItem)) {
+            toggleSelection({ currentTarget: gridItem, target: e.target });
+          }
+        });
+      }
+
+      // Quantity changes
+      const quantityInput = document.getElementById('quantity');
+      if (quantityInput) {
+        quantityInput.addEventListener('input', updateSummary);
+      }
+
+      // Modal close handlers
+      const modal = document.getElementById('myModal');
+      const span = document.querySelector('#myModal .close');
+
+      if (span && modal) {
+        span.onclick = function() {
+          modal.style.display = 'none';
+        };
+      }
+
+      window.onclick = function(event) {
+        if (modal && event.target === modal) {
+          modal.style.display = 'none';
+        }
+      };
+    });
+  </script>
+</body>
+</html>

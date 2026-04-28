@@ -1,90 +1,90 @@
-# Netlify + HubSpot + Shopify Integration
+# HubSpot + Shopify "Build Your Package" Integration
 
-Two Netlify Functions that receive form submissions from a Shopify custom form and push them into HubSpot.
+Custom Shopify page template that submits spa package bookings directly to HubSpot via the **Forms API** — no Netlify, no serverless functions, no Shopify apps.
+
+## How It Works
+
+1. Customer builds a spa package on the Shopify page:
+   - **Step 1:** Select 1 massage
+   - **Step 2:** Select 2+ add-ons
+   - **Step 3:** Set number of people
+2. Customer clicks **"Request a Booking"**
+3. A custom modal opens with a booking form (Name, Email, Phone, Date, Branch, Message)
+4. The form also shows a read-only preview of the selected package
+5. On submit, JavaScript assembles a JSON payload and `fetch()` posts it directly to:
+   ```
+   POST https://api.hsforms.com/submissions/v3/integration/submit/{portalId}/{formGuid}
+   ```
+6. HubSpot creates/updates the contact and triggers any attached workflows
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `build-package.html` | Shopify page template. Place in `templates/page.build-your-package.liquid` (or rename accordingly). Contains the full package builder + booking modal. |
 
 ## Setup
 
-### 1. Set environment variables
+### 1. Upload the template to Shopify
 
-Use the **Netlify UI** (Site settings → Environment variables) or the **Netlify CLI**:
+- Rename `build-package.html` to `page.build-your-package.liquid`
+- Upload it to your theme's `templates/` folder
+- Create a new Shopify page and set its template to "page.build-your-package"
 
-```bash
-netlify env:set HUB_SPOT_ACCESS_TOKEN "pat-eu1-xxxxx..."
-```
+### 2. Configure HubSpot field mapping
 
-> **Important:** Never commit secrets to `netlify.toml`. Environment variables declared in `netlify.toml` are **not available** to serverless functions. Always use the UI/CLI and ensure the variable scope includes **Functions**.
+The JavaScript sends these field names to HubSpot. **Update them** in the `fetch()` payload to match the exact internal field names in your HubSpot form (`fef0d83e-9157-4ac9-80a8-10f12468f238`):
 
-### 2. Deploy
+| Data | Placeholder Field Name |
+|------|------------------------|
+| First name | `firstname` |
+| Last name | `lastname` |
+| Email | `email` |
+| Phone | `phone` |
+| Preferred date | `preferred_date` |
+| Branch | `branch` |
+| Message | `message` |
+| Massage type | `massage_type` |
+| Add-ons | `addons_selected` |
+| Number of people | `number_of_people` |
+| Total price | `total_price` |
+| Total duration | `total_duration` |
+| Package summary | `package_summary` |
 
-Push to git. Netlify auto-detects `netlify/functions/` — no extra build config needed for simple JS functions.
+> **Important:** The field names in the JavaScript `fields` array must exactly match the internal property names of your HubSpot form fields.
 
-```bash
-git push origin main
-```
+### 3. Branch options
 
-### 3. Shopify form
+The dropdown in the modal currently shows:
+- Durban
+- Umhlanga
+- Ballito
 
-- Copy `shopify-form.liquid` into your Shopify theme (as a section or snippet).
-- Update `NETLIFY_BASE_URL` to your deployed Netlify site URL.
-- Choose `INTEGRATION_MODE` (`crm` or `forms`).
-- If using `forms` mode, also fill in `HUBSPOT_PORTAL_ID` and `HUBSPOT_FORM_GUID`.
+Update the `<select name="branch">` options in `build-package.html` to match your actual locations.
 
-## Functions
+## Why This Approach
 
-| Function | Path | API Used | Best For |
-|----------|------|----------|----------|
-| `submit-booking` | `/.netlify/functions/submit-booking` | HubSpot CRM **batch upsert** | Direct contact create/update, deduplicated by email |
-| `submit-hubspot-form` | `/.netlify/functions/submit-hubspot-form` | HubSpot Forms API (authenticated secure endpoint) | Triggering HubSpot workflows, form analytics, and marketing automation |
+| Requirement | Solution |
+|-------------|----------|
+| No Netlify / serverless | Direct `fetch()` from browser to HubSpot Forms API |
+| No Shopify app | Pure Liquid + HTML + vanilla JS in theme template |
+| No exposed API tokens | HubSpot Forms API is public by design; no token needed |
+| Create/update HubSpot contacts | Forms API automatically creates or deduplicates by email |
+| Trigger HubSpot workflows | Form submission events fire attached workflows |
 
-### `submit-booking` (CRM API)
-- Uses `POST /crm/v3/objects/contacts/batch/upsert`
-- Automatically **creates or updates** the contact by `email`
-- Returns `contactId` and whether the record was created or updated
+## Technical Notes
 
-### `submit-hubspot-form` (Forms API)
-- Uses `POST https://api.hsforms.com/submissions/v3/integration/secure/submit/{portalId}/{formGuid}`
-- Requires the same `HUB_SPOT_ACCESS_TOKEN`
-- Triggers HubSpot form submission events, workflows, and thank-you messages
+- **CORS:** The HubSpot Forms API allows cross-origin requests from storefronts. No proxy needed.
+- **Tracking:** If the HubSpot tracking script (`js-eu1.hs-scripts.com`) is loaded on your store, the `hubspotutk` cookie is captured and passed in the `context.hutk` field for attribution.
+- **jQuery:** Included for compatibility with existing theme code, but the HubSpot submission uses vanilla JS `fetch()`.
+- **Layout:** The template uses `{% layout none %}` because it contains a full `<html><head><body>` document. This prevents Shopify from wrapping it in `theme.liquid`.
 
-## Shopify form payload examples
+## Previous Approach (Deprecated)
 
-### CRM mode
-```json
-POST /.netlify/functions/submit-booking
-{
-  "properties": {
-    "email": "jane@example.com",
-    "firstname": "Jane",
-    "lastname": "Doe",
-    "phone": "+1 555 0100",
-    "message": "Looking for a massage"
-  }
-}
-```
+Earlier versions of this repo used:
+- Netlify Functions + HubSpot CRM API
+- Embedded HubSpot iframe forms with fragile cross-origin field injection
+- External PHP endpoints (`submitform.php`)
+- Gift form + draft order creation
 
-### Forms mode
-```json
-POST /.netlify/functions/submit-hubspot-form
-{
-  "portalId": "1234567",
-  "formGuid": "abc123-def456",
-  "fields": [
-    { "name": "email", "value": "jane@example.com" },
-    { "name": "firstname", "value": "Jane" }
-  ],
-  "context": {
-    "pageUri": "https://store.com/pages/booking",
-    "pageName": "Booking Page",
-    "hutk": "hubspotutk cookie value"
-  }
-}
-```
-
-## CORS
-Both functions return `Access-Control-Allow-Origin: *` so they work from any Shopify domain.
-
-## Netlify-specific notes
-
-- **Function directory:** `netlify/functions/` is the default and is used here.
-- **No publish directory:** This repo is functions-only, so `netlify.toml` does not set a `publish` directory. If you add a frontend later, set `publish = "dist"` (or similar) and keep functions outside that folder.
-- **Node version:** Netlify uses the Node version specified in `package.json` engines field or `.nvmrc`. For `fetch()` support (Node 18+), no extra config is needed on modern Netlify builds.
+All of these have been removed in favor of the direct, serverless Forms API approach.
